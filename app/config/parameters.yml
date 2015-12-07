@@ -1,0 +1,12 @@
+# This file is auto-generated during the composer install
+parameters:
+    database_host: 127.0.0.1
+    database_port: 3306
+    database_name: miw_padel15
+    database_user: miw_padel15
+    database_password: '*miw_padel15*'
+    mailer_transport: smtp
+    mailer_host: 127.0.0.1
+    mailer_user: null
+    mailer_password: null
+    secret: 1d55be79c601a128ec66a2ecf37b508d25d4ab63
