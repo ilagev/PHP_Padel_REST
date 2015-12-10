@@ -2,11 +2,13 @@
 
 namespace Miw\PadelBundle\Controller;
 
-use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\FrameworkBundle\Controller\Controller;
-
-use Miw\PadelBundle\Entity\Users;
-use Miw\PadelBundle\Form\UsersType;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Serializer\Serializer;
+use Symfony\Component\Serializer\Encoder\XmlEncoder;
+use Symfony\Component\Serializer\Encoder\JsonEncoder;
+use Symfony\Component\Serializer\Normalizer\ObjectNormalizer;
 
 /**
  * Users controller.
@@ -21,13 +23,18 @@ class UsersController extends Controller
      */
     public function indexAction()
     {
+        $encoders = array(new XmlEncoder(), new JsonEncoder());
+        $normalizers = array(new ObjectNormalizer());
+        $serializer = new Serializer($normalizers, $encoders);
+        
         $em = $this->getDoctrine()->getManager();
+        $users = $em->getRepository('MiwPadelBundle:Users')->findAll();
 
-        $entities = $em->getRepository('MiwPadelBundle:Users')->findAll();
-
-        return $this->render('MiwPadelBundle:Users:index.html.twig', array(
-            'entities' => $entities,
-        ));
+        return new Response(
+            $serializer->serialize($users, 'json'),
+            Response::HTTP_OK,
+            array('content-type' => 'application/json')
+        );
     }
     /**
      * Creates a new Users entity.
@@ -35,56 +42,28 @@ class UsersController extends Controller
      */
     public function createAction(Request $request)
     {
-        $entity = new Users();
-        $form = $this->createCreateForm($entity);
-        $form->handleRequest($request);
-
-        if ($form->isValid()) {
+        $encoders = array(new XmlEncoder(), new JsonEncoder());
+        $normalizers = array(new ObjectNormalizer());
+        $serializer = new Serializer($normalizers, $encoders);
+        
+        $user = $serializer->deserialize(
+                $request->getContent(),
+                'Miw\PadelBundle\Entity\Users',
+                'json');
+        
+        if ($user != null) { // valid JSON
             $em = $this->getDoctrine()->getManager();
-            $em->persist($entity);
+            $em->persist($user);
             $em->flush();
-
-            return $this->redirect($this->generateUrl('api_users_show', array('id' => $entity->getId())));
         }
-
-        return $this->render('MiwPadelBundle:Users:new.html.twig', array(
-            'entity' => $entity,
-            'form'   => $form->createView(),
-        ));
-    }
-
-    /**
-     * Creates a form to create a Users entity.
-     *
-     * @param Users $entity The entity
-     *
-     * @return \Symfony\Component\Form\Form The form
-     */
-    private function createCreateForm(Users $entity)
-    {
-        $form = $this->createForm(new UsersType(), $entity, array(
-            'action' => $this->generateUrl('api_users_create'),
-            'method' => 'POST',
-        ));
-
-        $form->add('submit', 'submit', array('label' => 'Create'));
-
-        return $form;
-    }
-
-    /**
-     * Displays a form to create a new Users entity.
-     *
-     */
-    public function newAction()
-    {
-        $entity = new Users();
-        $form   = $this->createCreateForm($entity);
-
-        return $this->render('MiwPadelBundle:Users:new.html.twig', array(
-            'entity' => $entity,
-            'form'   => $form->createView(),
-        ));
+        
+        return new Response(
+            $serializer->serialize(array(
+                'result'   => 'OK',
+                'user_id' => $user->getId()), 'json'),
+            Response::HTTP_OK,
+            array('content-type' => 'application/json')
+        );
     }
 
     /**
@@ -93,93 +72,90 @@ class UsersController extends Controller
      */
     public function showAction($id)
     {
+        $content = null;
+        $status = null;
+        
+        $encoders = array(new XmlEncoder(), new JsonEncoder());
+        $normalizers = array(new ObjectNormalizer());
+        $serializer = new Serializer($normalizers, $encoders);
+        
         $em = $this->getDoctrine()->getManager();
+        $user = $em->getRepository('MiwPadelBundle:Users')->find($id);
 
-        $entity = $em->getRepository('MiwPadelBundle:Users')->find($id);
-
-        if (!$entity) {
-            throw $this->createNotFoundException('Unable to find Users entity.');
+        if (!$user) {
+            $content = array(
+                'result'  => 'NOT FOUND',
+                'user_id' => $id);
+            $status = Response::HTTP_NOT_FOUND;
+        } else {
+            $content = $user;
+            $status = Response::HTTP_OK;
         }
-
-        $deleteForm = $this->createDeleteForm($id);
-
-        return $this->render('MiwPadelBundle:Users:show.html.twig', array(
-            'entity'      => $entity,
-            'delete_form' => $deleteForm->createView(),
-        ));
+        
+        return new Response(
+            $serializer->serialize($content, 'json'),
+            $status,
+            array('content-type' => 'application/json')
+        );
     }
 
-    /**
-     * Displays a form to edit an existing Users entity.
-     *
-     */
-    public function editAction($id)
-    {
-        $em = $this->getDoctrine()->getManager();
-
-        $entity = $em->getRepository('MiwPadelBundle:Users')->find($id);
-
-        if (!$entity) {
-            throw $this->createNotFoundException('Unable to find Users entity.');
-        }
-
-        $editForm = $this->createEditForm($entity);
-        $deleteForm = $this->createDeleteForm($id);
-
-        return $this->render('MiwPadelBundle:Users:edit.html.twig', array(
-            'entity'      => $entity,
-            'edit_form'   => $editForm->createView(),
-            'delete_form' => $deleteForm->createView(),
-        ));
-    }
-
-    /**
-    * Creates a form to edit a Users entity.
-    *
-    * @param Users $entity The entity
-    *
-    * @return \Symfony\Component\Form\Form The form
-    */
-    private function createEditForm(Users $entity)
-    {
-        $form = $this->createForm(new UsersType(), $entity, array(
-            'action' => $this->generateUrl('api_users_update', array('id' => $entity->getId())),
-            'method' => 'PUT',
-        ));
-
-        $form->add('submit', 'submit', array('label' => 'Update'));
-
-        return $form;
-    }
     /**
      * Edits an existing Users entity.
      *
      */
     public function updateAction(Request $request, $id)
     {
-        $em = $this->getDoctrine()->getManager();
+        $content = null;
+        $status = null;
+        
+        $encoders = array(new XmlEncoder(), new JsonEncoder());
+        $normalizers = array(new ObjectNormalizer());
+        $serializer = new Serializer($normalizers, $encoders);
+        
+        $user_data = $serializer->deserialize(
+                $request->getContent(),
+                'Miw\PadelBundle\Entity\Users',
+                'json');
+        
+        if ($user_data != null) { // valid JSON
+            $em = $this->getDoctrine()->getManager();
+            $user = $em->getRepository('MiwPadelBundle:Users')->find($id);
+            
+            if (!$user) {
+                $content = array(
+                    'result'  => 'NOT FOUND',
+                    'user_id' => $id);
+                $status = Response::HTTP_NOT_FOUND;
+            } else {
+                $user->setUsername($user_data->getUsername());
+                $user->setUsernameCanonical($user_data->getUsernameCanonical());
+                $user->setEmail($user_data->getEmail());
+                $user->setEmailCanonical($user_data->getEmailCanonical());
+                $user->setEnabled($user_data->getEnabled());
+                $user->setSalt($user_data->getSalt());
+                $user->setPassword($user_data->getPassword());
+                $user->setLastLogin($user_data->getLastLogin());
+                $user->setLocked($user_data->getLocked());
+                $user->setExpired($user_data->getExpired());
+                $user->setExpiresAt($user_data->getExpiresAt());
+                $user->setConfirmationToken($user_data->getConfirmationToken());
+                $user->setPasswordRequestedAt($user_data->getPasswordRequestedAt());
+                $user->setRoles($user_data->getRoles());
+                $user->setCredentialsExpired($user_data->getCredentialsExpired());
+                $user->setCredentialsExpireAt($user_data->getCredentialsExpireAt());
+                
+                $em->flush();
 
-        $entity = $em->getRepository('MiwPadelBundle:Users')->find($id);
-
-        if (!$entity) {
-            throw $this->createNotFoundException('Unable to find Users entity.');
+                $content = $user;
+                $status = Response::HTTP_OK;
+            }
         }
-
-        $deleteForm = $this->createDeleteForm($id);
-        $editForm = $this->createEditForm($entity);
-        $editForm->handleRequest($request);
-
-        if ($editForm->isValid()) {
-            $em->flush();
-
-            return $this->redirect($this->generateUrl('api_users_edit', array('id' => $id)));
-        }
-
-        return $this->render('MiwPadelBundle:Users:edit.html.twig', array(
-            'entity'      => $entity,
-            'edit_form'   => $editForm->createView(),
-            'delete_form' => $deleteForm->createView(),
-        ));
+        
+        return new Response(
+            $serializer->serialize($content, 'json'),
+            $status,
+            array('content-type' => 'application/json')
+        );
     }
     /**
      * Deletes a Users entity.
@@ -187,38 +163,35 @@ class UsersController extends Controller
      */
     public function deleteAction(Request $request, $id)
     {
-        $form = $this->createDeleteForm($id);
-        $form->handleRequest($request);
+        $content = null;
+        $status = null;
+        
+        $encoders = array(new XmlEncoder(), new JsonEncoder());
+        $normalizers = array(new ObjectNormalizer());
+        $serializer = new Serializer($normalizers, $encoders);
+        
+        $em = $this->getDoctrine()->getManager();
+        $user = $em->getRepository('MiwPadelBundle:Users')->find($id);
 
-        if ($form->isValid()) {
-            $em = $this->getDoctrine()->getManager();
-            $entity = $em->getRepository('MiwPadelBundle:Users')->find($id);
-
-            if (!$entity) {
-                throw $this->createNotFoundException('Unable to find Users entity.');
-            }
-
-            $em->remove($entity);
+        if (!$user) {
+            $content = array(
+                'result'  => 'NOT FOUND',
+                'user_id' => $id);
+            $status = Response::HTTP_NOT_FOUND;
+        } else {
+            $em->remove($user);
             $em->flush();
+            
+            $content = array(
+                'result'  => 'OK',
+                'user_id' => $id);
+            $status = Response::HTTP_OK;
         }
-
-        return $this->redirect($this->generateUrl('api_users'));
-    }
-
-    /**
-     * Creates a form to delete a Users entity by id.
-     *
-     * @param mixed $id The entity id
-     *
-     * @return \Symfony\Component\Form\Form The form
-     */
-    private function createDeleteForm($id)
-    {
-        return $this->createFormBuilder()
-            ->setAction($this->generateUrl('api_users_delete', array('id' => $id)))
-            ->setMethod('DELETE')
-            ->add('submit', 'submit', array('label' => 'Delete'))
-            ->getForm()
-        ;
+        
+        return new Response(
+            $serializer->serialize($content, 'json'),
+            $status,
+            array('content-type' => 'application/json')
+        );
     }
 }
