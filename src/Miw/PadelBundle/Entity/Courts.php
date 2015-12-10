@@ -15,7 +15,7 @@ class Courts
     /**
      * @var boolean
      */
-    private $active = '1';
+    private $active;
 
 
     /**

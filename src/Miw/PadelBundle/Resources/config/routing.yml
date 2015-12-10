@@ -1,3 +1,11 @@
+miw_padel_api_users:
+    resource: "@MiwPadelBundle/Resources/config/routing/users.yml"
+    prefix:   /api/users
+
+miw_padel_api_courts:
+    resource: "@MiwPadelBundle/Resources/config/routing/courts.yml"
+    prefix:   /api/courts
+
 miw_padel_homepage:
     path:     /hello/{name}
     defaults: { _controller: MiwPadelBundle:Default:index }

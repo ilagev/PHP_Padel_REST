@@ -1,0 +1,24 @@
+api_courts:
+    path:     /
+    defaults: { _controller: "MiwPadelBundle:Courts:index" }
+    methods: [GET]
+    
+api_courts_create:
+    path:     /
+    defaults: { _controller: "MiwPadelBundle:Courts:create" }
+    methods:  [POST]
+
+api_courts_show:
+    path:     /{id}
+    defaults: { _controller: "MiwPadelBundle:Courts:show" }
+    methods: [GET]
+
+api_courts_update:
+    path:     /{id}
+    defaults: { _controller: "MiwPadelBundle:Courts:update" }
+    methods:  [PUT]
+
+api_courts_delete:
+    path:     /{id}
+    defaults: { _controller: "MiwPadelBundle:Courts:delete" }
+    methods:  [DELETE]
