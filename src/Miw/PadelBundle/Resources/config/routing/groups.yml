@@ -1,0 +1,24 @@
+api_groups:
+    path:     /
+    defaults: { _controller: "MiwPadelBundle:Groups:index" }
+    methods: [GET]
+    
+api_groups_create:
+    path:     /
+    defaults: { _controller: "MiwPadelBundle:Groups:create" }
+    methods:  [POST]
+
+api_groups_show:
+    path:     /{id}
+    defaults: { _controller: "MiwPadelBundle:Groups:show" }
+    methods: [GET]
+
+api_groups_update:
+    path:     /{id}
+    defaults: { _controller: "MiwPadelBundle:Groups:update" }
+    methods:  [PUT]
+
+api_groups_delete:
+    path:     /{id}
+    defaults: { _controller: "MiwPadelBundle:Groups:delete" }
+    methods:  [DELETE]
