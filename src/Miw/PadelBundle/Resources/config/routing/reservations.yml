@@ -1,0 +1,24 @@
+api_reservations:
+    path:     /
+    defaults: { _controller: "MiwPadelBundle:Reservations:index" }
+    methods: [GET]
+    
+api_reservations_create:
+    path:     /
+    defaults: { _controller: "MiwPadelBundle:Reservations:create" }
+    methods:  [POST]
+
+api_reservations_show:
+    path:     /{id}
+    defaults: { _controller: "MiwPadelBundle:Reservations:show" }
+    methods: [GET]
+
+api_reservations_update:
+    path:     /{id}
+    defaults: { _controller: "MiwPadelBundle:Reservations:update" }
+    methods:  [PUT]
+
+api_reservations_delete:
+    path:     /{id}
+    defaults: { _controller: "MiwPadelBundle:Reservations:delete" }
+    methods:  [DELETE]
