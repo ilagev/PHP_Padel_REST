@@ -36,6 +36,20 @@ class UsersController extends Controller
             array('content-type' => 'application/json')
         );
     }
+    
+    public function validJson ($json) { // checks if all required fields are in
+        return
+            array_key_exists('username', $json) &&
+            array_key_exists('email', $json) &&
+            array_key_exists('enabled', $json) &&
+            array_key_exists('salt', $json) &&
+            array_key_exists('password', $json) &&
+            array_key_exists('locked', $json) &&
+            array_key_exists('expired', $json) &&
+            array_key_exists('roles', $json) &&
+            array_key_exists('credentials_expired', $json);
+    }
+    
     /**
      * Creates a new Users entity.
      *
@@ -46,24 +60,48 @@ class UsersController extends Controller
         $normalizers = array(new ObjectNormalizer());
         $serializer = new Serializer($normalizers, $encoders);
         
+        if (!$this->validJson(json_decode($request->getContent()))) {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'Error',
+                    'message' => 'Invalid user data'), 'json'),
+                Response::HTTP_BAD_REQUEST,
+                array('content-type' => 'application/json'));
+        }
+        
         $user = $serializer->deserialize(
                 $request->getContent(),
                 'Miw\PadelBundle\Entity\Users',
                 'json');
         
-        if ($user != null) { // valid JSON
-            $em = $this->getDoctrine()->getManager();
+        $user->setUsernameCanonical(strtolower($user->getUsername()));
+        $user->setEmailCanonical(strtolower($user->getEmail()));
+        
+        $em = $this->getDoctrine()->getManager();
+        
+        $user_exists = $em->getRepository('Miw\PadelBundle\Entity\Users')
+                          ->findOneBy(array('username' => $user->getUsername()));
+        
+        if (!$user_exists) {
             $em->persist($user);
             $em->flush();
+            
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'OK',
+                    'user_id' => $user->getId()), 'json'),
+                Response::HTTP_OK,
+                array('content-type' => 'application/json')
+            );  
+        } else {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'Error',
+                    'message' =>  'User already exists'), 'json'),
+                Response::HTTP_CONFLICT,
+                array('content-type' => 'application/json')
+            );
         }
-        
-        return new Response(
-            $serializer->serialize(array(
-                'result'   => 'OK',
-                'user_id' => $user->getId()), 'json'),
-            Response::HTTP_OK,
-            array('content-type' => 'application/json')
-        );
     }
 
     /**
@@ -111,6 +149,15 @@ class UsersController extends Controller
         $encoders = array(new XmlEncoder(), new JsonEncoder());
         $normalizers = array(new ObjectNormalizer());
         $serializer = new Serializer($normalizers, $encoders);
+        
+        if (!$this->validJson(json_decode($request->getContent()))) {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'Error',
+                    'message' => 'Invalid user data'), 'json'),
+                Response::HTTP_BAD_REQUEST,
+                array('content-type' => 'application/json'));
+        }
         
         $user_data = $serializer->deserialize(
                 $request->getContent(),
@@ -186,6 +233,37 @@ class UsersController extends Controller
                 'result'  => 'OK',
                 'user_id' => $id);
             $status = Response::HTTP_OK;
+        }
+        
+        return new Response(
+            $serializer->serialize($content, 'json'),
+            $status,
+            array('content-type' => 'application/json')
+        );
+    }
+    
+    public function addToGroupAction(Request $request, $id, $groupId) {
+        
+        $encoders = array(new XmlEncoder(), new JsonEncoder());
+        $normalizers = array(new ObjectNormalizer());
+        $serializer = new Serializer($normalizers, $encoders);
+        
+        $em = $this->getDoctrine()->getManager();
+        
+        $user = $em->find('MiwPadelBundle:Users', $id);
+        $group = $em->find('MiwPadelBundle:Groups', $groupId);
+        
+        if ($user && $group) {
+            $group->addUser($user);
+            $em->flush();
+            
+            $content = $user;
+            $status = Response::HTTP_OK;
+        } else {
+            $content = array(
+                'result'  => 'NOT FOUND',
+                'message' => 'user or group does not exist');
+            $status = Response::HTTP_NOT_FOUND;
         }
         
         return new Response(

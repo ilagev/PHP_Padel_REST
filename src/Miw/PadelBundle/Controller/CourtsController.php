@@ -36,6 +36,12 @@ class CourtsController extends Controller
             array('content-type' => 'application/json')
         );
     }
+    
+    public function validJson ($json) { // checks if all required fields are in
+        return
+            array_key_exists('active', $json);
+    }
+    
     /**
      * Creates a new Courts entity.
      *
@@ -46,21 +52,28 @@ class CourtsController extends Controller
         $normalizers = array(new ObjectNormalizer());
         $serializer = new Serializer($normalizers, $encoders);
         
+        if (!$this->validJson(json_decode($request->getContent()))) {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'  => 'Error',
+                    'message' => 'Invalid court data'), 'json'),
+                Response::HTTP_BAD_REQUEST,
+                array('content-type' => 'application/json'));
+        }
+        
         $court = $serializer->deserialize(
                 $request->getContent(),
                 'Miw\PadelBundle\Entity\Courts',
                 'json');
         
-        if ($court != null) { // valid JSON
-            $em = $this->getDoctrine()->getManager();
-            $em->persist($court);
-            $em->flush();
-        }
-        
+        $em = $this->getDoctrine()->getManager();
+        $em->persist($court);
+        $em->flush();
+
         return new Response(
             $serializer->serialize(array(
                 'result'   => 'OK',
-                'court_id' => $court->getId()), 'json'),
+                'group_id' => $court->getId()), 'json'),
             Response::HTTP_OK,
             array('content-type' => 'application/json')
         );
@@ -110,6 +123,15 @@ class CourtsController extends Controller
         $encoders = array(new XmlEncoder(), new JsonEncoder());
         $normalizers = array(new ObjectNormalizer());
         $serializer = new Serializer($normalizers, $encoders);
+        
+        if (!$this->validJson(json_decode($request->getContent()))) {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'  => 'Error',
+                    'message' => 'Invalid court data'), 'json'),
+                Response::HTTP_BAD_REQUEST,
+                array('content-type' => 'application/json'));
+        }
         
         $court_data = $serializer->deserialize(
                 $request->getContent(),

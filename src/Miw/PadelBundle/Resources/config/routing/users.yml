@@ -22,3 +22,8 @@ api_users_delete:
     path:     /{id}
     defaults: { _controller: "MiwPadelBundle:Users:delete" }
     methods:  [DELETE]
+    
+api_groups_add_to_group:
+    path:     /{id}/groups/{groupId}
+    defaults: { _controller: "MiwPadelBundle:Users:addToGroup" }
+    methods:  [POST]

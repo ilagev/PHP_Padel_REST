@@ -36,6 +36,14 @@ class ReservationsController extends Controller
             array('content-type' => 'application/json')
         );
     }
+    
+    public function validJson ($json) { // checks if all required fields are in
+        return
+            array_key_exists('user_id', $json) &&
+            array_key_exists('court_id', $json) &&
+            array_key_exists('datetime', $json);
+    }
+    
     /**
      * Creates a new Reservations entity.
      *
@@ -48,34 +56,61 @@ class ReservationsController extends Controller
         
         $em = $this->getDoctrine()->getManager();
         
-        /*$reservation = $serializer->deserialize(
-                $request->getContent(),
-                'Miw\PadelBundle\Entity\Reservations',
-                'json');*/
+        if (!$this->validJson(json_decode($request->getContent()))) {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'  => 'Error',
+                    'message' => 'Invalid reservation data'), 'json'),
+                Response::HTTP_BAD_REQUEST,
+                array('content-type' => 'application/json'));
+        }
         
         $data = json_decode($request->getContent());
         $user = $em->find('Miw\PadelBundle\Entity\Users', $data->{'user_id'});
         $court = $em->find('Miw\PadelBundle\Entity\Courts', $data->{'court_id'});
         $datetime = \DateTime::createFromFormat('d/m/Y', $data->{'datetime'});
         
+        if (!($user && $court && $datetime)) {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'  => 'Error',
+                    'message' => 'User or court does not exist'), 'json'),
+                Response::HTTP_NOT_FOUND,
+                array('content-type' => 'application/json'));
+        }
+        
         $reservation = new \Miw\PadelBundle\Entity\Reservations();
         
-        if ($user && $court && $datetime) { // valid JSON
+        $reservation_exists = $em->getRepository('Miw\PadelBundle\Entity\Reservations')
+                                 ->findOneBy(array('user'     => $user,
+                                                   'court'    => $court,
+                                                   'datetime' => $datetime));
+        
+        if (!$reservation_exists) { // valid JSON
             $reservation->setUser($user);
             $reservation->setCourt($court);
             $reservation->setDatetime($datetime);
             
             $em->persist($reservation);
             $em->flush();
+            
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'OK',
+                    'reservation_id' => $reservation->getId()), 'json'),
+                Response::HTTP_OK,
+                array('content-type' => 'application/json')
+            );
+        } else {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'Error',
+                    'message' =>  'Reservation already exists'), 'json'),
+                Response::HTTP_CONFLICT,
+                array('content-type' => 'application/json')
+            );
         }
         
-        return new Response(
-            $serializer->serialize(array(
-                'result'   => 'OK',
-                'reservation_id' => $reservation->getId()), 'json'),
-            Response::HTTP_OK,
-            array('content-type' => 'application/json')
-        );
     }
 
     /**
@@ -124,6 +159,15 @@ class ReservationsController extends Controller
         $normalizers = array(new ObjectNormalizer());
         $serializer = new Serializer($normalizers, $encoders);
         
+        if (!$this->validJson(json_decode($request->getContent()))) {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'Error',
+                    'message' => 'Invalid reservation data'), 'json'),
+                Response::HTTP_BAD_REQUEST,
+                array('content-type' => 'application/json'));
+        }
+        
         $em = $this->getDoctrine()->getManager();
         
         $data = json_decode($request->getContent());
@@ -132,33 +176,27 @@ class ReservationsController extends Controller
         $datetime = \DateTime::createFromFormat('d/m/Y', $data->{'datetime'});
         
         $reservation_data = new \Miw\PadelBundle\Entity\Reservations();
-        
-        if ($user && $court && $datetime) { // valid JSON
             
-            $reservation_data->setUser($user);
-            $reservation_data->setCourt($court);
-            $reservation_data->setDatetime($datetime);
-            
-            $reservation = $em->getRepository('MiwPadelBundle:Reservations')->find($id);
-            
-            if (!$reservation) {
-                $content = array(
-                    'result'  => 'NOT FOUND',
-                    'reservation_id' => $id);
-                $status = Response::HTTP_NOT_FOUND;
-            } else {
-                $reservation->setDatetime($reservation_data->getDatetime());
-                $reservation->setCourt($reservation_data->getCourt());
-                $reservation->setUser($reservation_data->getUser());
-                
-                $em->flush();
+        $reservation_data->setUser($user);
+        $reservation_data->setCourt($court);
+        $reservation_data->setDatetime($datetime);
 
-                $content = $reservation;
-                $status = Response::HTTP_OK;
-            }
+        $reservation = $em->getRepository('MiwPadelBundle:Reservations')->find($id);
+
+        if (!$reservation) {
+            $content = array(
+                'result'  => 'NOT FOUND',
+                'reservation_id' => $id);
+            $status = Response::HTTP_NOT_FOUND;
         } else {
-            $content = array('message' => 'invalid data');
-            $status = Response::HTTP_BAD_REQUEST;
+            $reservation->setDatetime($reservation_data->getDatetime());
+            $reservation->setCourt($reservation_data->getCourt());
+            $reservation->setUser($reservation_data->getUser());
+
+            $em->flush();
+
+            $content = $reservation;
+            $status = Response::HTTP_OK;
         }
         
         return new Response(

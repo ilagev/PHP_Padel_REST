@@ -36,6 +36,13 @@ class GroupsController extends Controller
             array('content-type' => 'application/json')
         );
     }
+    
+    public function validJson ($json) { // checks if all required fields are in
+        return
+            array_key_exists('name', $json) &&
+            array_key_exists('roles', $json);
+    }
+    
     /**
      * Creates a new Groups entity.
      *
@@ -46,24 +53,45 @@ class GroupsController extends Controller
         $normalizers = array(new ObjectNormalizer());
         $serializer = new Serializer($normalizers, $encoders);
         
+        if (!$this->validJson(json_decode($request->getContent()))) {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'Error',
+                    'message' => 'Invalid group data'), 'json'),
+                Response::HTTP_BAD_REQUEST,
+                array('content-type' => 'application/json'));
+        }
+        
         $group = $serializer->deserialize(
                 $request->getContent(),
                 'Miw\PadelBundle\Entity\Groups',
                 'json');
         
-        if ($group != null) { // valid JSON
-            $em = $this->getDoctrine()->getManager();
+        $em = $this->getDoctrine()->getManager();
+        
+        $group_exists = $em->getRepository('Miw\PadelBundle\Entity\Groups')
+                           ->findOneBy(array('name' => $group->getName()));
+        
+        if (!$group_exists) {
             $em->persist($group);
             $em->flush();
+            
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'OK',
+                    'group_id' => $group->getId()), 'json'),
+                Response::HTTP_OK,
+                array('content-type' => 'application/json')
+            );  
+        } else {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'Error',
+                    'message' =>  'Group already exists'), 'json'),
+                Response::HTTP_CONFLICT,
+                array('content-type' => 'application/json')
+            );
         }
-        
-        return new Response(
-            $serializer->serialize(array(
-                'result'   => 'OK',
-                'group_id' => $group->getId()), 'json'),
-            Response::HTTP_OK,
-            array('content-type' => 'application/json')
-        );
     }
 
     /**
@@ -111,6 +139,15 @@ class GroupsController extends Controller
         $encoders = array(new XmlEncoder(), new JsonEncoder());
         $normalizers = array(new ObjectNormalizer());
         $serializer = new Serializer($normalizers, $encoders);
+        
+        if (!$this->validJson(json_decode($request->getContent()))) {
+            return new Response(
+                $serializer->serialize(array(
+                    'result'   => 'Error',
+                    'message' => 'Invalid group data'), 'json'),
+                Response::HTTP_BAD_REQUEST,
+                array('content-type' => 'application/json'));
+        }
         
         $group_data = $serializer->deserialize(
                 $request->getContent(),
@@ -172,6 +209,37 @@ class GroupsController extends Controller
                 'result'  => 'OK',
                 'group_id' => $id);
             $status = Response::HTTP_OK;
+        }
+        
+        return new Response(
+            $serializer->serialize($content, 'json'),
+            $status,
+            array('content-type' => 'application/json')
+        );
+    }
+    
+    public function addUserAction(Request $request, $id, $userId) {
+        
+        $encoders = array(new XmlEncoder(), new JsonEncoder());
+        $normalizers = array(new ObjectNormalizer());
+        $serializer = new Serializer($normalizers, $encoders);
+        
+        $em = $this->getDoctrine()->getManager();
+        
+        $group = $em->find('MiwPadelBundle:Groups', $id);
+        $user = $em->find('MiwPadelBundle:Users', $userId);
+        
+        if ($user && $group) {
+            $group->addUser($user);
+            $em->flush();
+            
+            $content = $group;
+            $status = Response::HTTP_OK;
+        } else {
+            $content = array(
+                'result'  => 'NOT FOUND',
+                'message' => 'user or group does not exist');
+            $status = Response::HTTP_NOT_FOUND;
         }
         
         return new Response(
