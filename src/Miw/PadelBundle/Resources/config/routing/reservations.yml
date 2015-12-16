@@ -9,8 +9,8 @@ api_reservations_create:
     methods:  [POST]
 
 api_reservations_show:
-    path:     /{id}
-    defaults: { _controller: "MiwPadelBundle:Reservations:show" }
+    path:     /{id}.{format}
+    defaults: { _controller: "MiwPadelBundle:Reservations:show", format: json }
     methods: [GET]
 
 api_reservations_update:

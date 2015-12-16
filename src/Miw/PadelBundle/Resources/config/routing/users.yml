@@ -9,8 +9,8 @@ api_users_create:
     methods:  [POST]
 
 api_users_show:
-    path:     /{id}
-    defaults: { _controller: "MiwPadelBundle:Users:show" }
+    path:     /{id}.{format}
+    defaults: { _controller: "MiwPadelBundle:Users:show", format: json }
     methods: [GET]
 
 api_users_update:

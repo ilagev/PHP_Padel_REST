@@ -9,8 +9,8 @@ api_groups_create:
     methods:  [POST]
 
 api_groups_show:
-    path:     /{id}
-    defaults: { _controller: "MiwPadelBundle:Groups:show" }
+    path:     /{id}.{format}
+    defaults: { _controller: "MiwPadelBundle:Groups:show", format: json }
     methods: [GET]
 
 api_groups_update:

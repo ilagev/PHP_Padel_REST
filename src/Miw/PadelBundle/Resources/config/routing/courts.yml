@@ -9,8 +9,8 @@ api_courts_create:
     methods:  [POST]
 
 api_courts_show:
-    path:     /{id}
-    defaults: { _controller: "MiwPadelBundle:Courts:show" }
+    path:     /{id}.{format}
+    defaults: { _controller: "MiwPadelBundle:Courts:show", format: json }
     methods: [GET]
 
 api_courts_update:

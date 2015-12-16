@@ -117,7 +117,7 @@ class ReservationsController extends Controller
      * Finds and displays a Reservations entity.
      *
      */
-    public function showAction($id)
+    public function showAction($id, $format)
     {
         $content = null;
         $status = null;
@@ -140,9 +140,9 @@ class ReservationsController extends Controller
         }
         
         return new Response(
-            $serializer->serialize($content, 'json'),
+            $serializer->serialize($content, $format),
             $status,
-            array('content-type' => 'application/json')
+            array('content-type' => 'application/' . $format)
         );
     }
 
